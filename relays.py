@@ -154,7 +154,7 @@ class RelaysGroup:
                 pass
 
     def __sendCommand(self, num, state):
-        urlRequest = urlopen(self.__addr + '/cmd.cgi?cmd=REL,' + str(num) + ',' + str(state))
+        urlRequest = urlopen(self.__addr + '/cmd.cgi?psw=' + self.__password + '&cmd=REL,' + str(num) + ',' + str(state))
 
         if not urlRequest.getcode() == 200:
             #TODO log message
