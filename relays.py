@@ -37,15 +37,17 @@ relays_avail = [
 class RelaysGroup:
     def __init__(self, list_relays):
         self.__relays = []
+        self.__configures = []
+        self.__addr = 'http://192.168.0.101'
+        self.__password = 'Laurent'
 
         if self.__checkRelays(list_relays) and self.__initialize():
             #create list for self.__relays
             for e in list_relays:
-                self.__relays.append({ name: e, state: "OFF" })
-
-        self.__configures = []
-        self.__addr = 'http://192.168.0.101'
-        self.__password = 'Laurent'
+                self.__relays.append({ 'name' : e, 'state' : "OFF" })
+        else:
+            #TODO log message
+            print("Can't init group")
 
     def configure(self, name, state_dict):
         for c in self.__configures:
@@ -54,7 +56,8 @@ class RelaysGroup:
                 print('That configure name already exists')
                 return 1
 
-        element = { 'name' : name, 
+        element = { 
+                    'name' : name, 
                     'value' : state_dict, 
                     'state' : 'OFF'
                 }
@@ -69,7 +72,7 @@ class RelaysGroup:
 
             elif arg.upper() == 'ON':
                 #turn on configure
-                for l in value['ON']:
+                for l in element['value']['ON']:
                     for relay in relays_avail:
                         if relay['name'] == l['name']:
                             state = 2
@@ -90,7 +93,7 @@ class RelaysGroup:
 
             elif arg.upper() == 'OFF':
                 #TODO turn off configure
-                for l in value['OFF']:
+                for l in element['value']['OFF']:
                     for relay in relays_avail:
                         if relay['name'] == l['name']:
                             state = 2
@@ -116,7 +119,12 @@ class RelaysGroup:
     def getRelays(self):
         return self.__relays
 
+    def getConfigures(self):
+        return self.__configures
+
     def __checkRelays(self, list_relays):
+        print(list_relays)
+
         for e in list_relays:
             flag = False
 
@@ -132,7 +140,7 @@ class RelaysGroup:
 
     def __initialize(self):
         #check connection
-        if self.__checkConnection():
+        if not self.__checkConnection():
             return False
 
         self.__relaysOff()
