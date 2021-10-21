@@ -176,7 +176,7 @@ class RelaysGroup:
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         while rcv_data:
-            if not ('#REL,OK' in rcv_data):
+            if not (b"#REL,OK" in rcv_data):
                 #TODO log message
                 print('Error in setting relay ' + str(num) + ' to ' + str(state))
                 return 1
@@ -193,7 +193,7 @@ class RelaysGroup:
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         while rcv_data:
-            if not ('#OK' in rcv_data):
+            if not (b"#OK" in rcv_data):
                 #TODO log message
                 print("Can't connect to device")
                 return 1
@@ -203,7 +203,7 @@ class RelaysGroup:
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         while rcv_data:
-            if not ('#PSW,SET,OK' in rcv_data):
+            if not (b"#PSW,SET,OK" in rcv_data):
                 #TODO log message
                 print("Can't set password")
                 return 2
