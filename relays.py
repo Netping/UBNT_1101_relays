@@ -1,4 +1,5 @@
 from urllib.request import urlopen
+import socket
 
 
 
@@ -38,8 +39,11 @@ class RelaysGroup:
     def __init__(self, list_relays):
         self.__relays = []
         self.__configures = []
-        self.__addr = 'http://192.168.0.101'
+        self.__addr = '192.168.0.101'
+        self.__TCPport = 2424
         self.__password = 'Laurent'
+        self.__sock = None
+        self.__TCPblockSize = 1024
 
         if self.__checkRelays(list_relays) and self.__initialize():
             #create list for self.__relays
@@ -122,6 +126,11 @@ class RelaysGroup:
     def getConfigures(self):
         return self.__configures
 
+    def deinit(self):
+        if self.__sock:
+            self.__sock.close()
+            self.__sock = None
+
     def __checkRelays(self, list_relays):
         print(list_relays)
 
@@ -140,7 +149,7 @@ class RelaysGroup:
 
     def __initialize(self):
         #check connection
-        if not self.__checkConnection():
+        if self.__initTCPConnection():
             return False
 
         self.__relaysOff()
@@ -154,22 +163,49 @@ class RelaysGroup:
                 pass
 
     def __sendCommand(self, num, state):
-        urlRequest = urlopen(self.__addr + '/cmd.cgi?psw=' + self.__password + '&cmd=REL,' + str(num) + ',' + str(state))
+        #urlRequest = urlopen(self.__addr + '/cmd.cgi?psw=' + self.__password + '&cmd=REL,' + str(num) + ',' + str(state))
 
-        if not urlRequest.getcode() == 200:
-            #TODO log message
-            return 1
+        #if not urlRequest.getcode() == 200:
+        #    #TODO log message
+        #    return 1
 
-        if not urlRequest.read().strip() == 'DONE':
-            #TODO log message
-            return 2
+        #if not urlRequest.read().strip() == 'DONE':
+        #    #TODO log message
+        #    return 2
+        self.__sock.send(b"$KE,REL," + str(num) + "," + str(state))
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        while rcv_data:
+            if not ('#REL,OK' in rcv_data):
+                #TODO log message
+                print('Error in setting relay ' + str(num) + ' to ' + str(state))
+                return 1
 
         return 0
 
-    def __checkConnection(self):
-        urlRequest = urlopen(self.__addr + '/state.xml')
+    def __initTCPConnection(self):
+        self.__sock = socket.socket()
 
-        if not urlRequest.getcode() == 200:
-            return False
+        self.__sock.connect( (self.__addr, self.__TCPport) )
 
-        return True
+        #check connection
+        self.__sock.send(b"$KE")
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        while rcv_data:
+            if not ('#OK' in rcv_data):
+                #TODO log message
+                print("Can't connect to device")
+                return 1
+
+        #set password
+        self.__sock.send(b"$KE,PSW,SET," + self.__password)
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        while rcv_data:
+            if not ('#PSW,SET,OK' in rcv_data):
+                #TODO log message
+                print("Can't set password")
+                return 2
+
+        return 0

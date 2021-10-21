@@ -63,5 +63,7 @@ def main():
 
     DischargeLoad_1('Discharge1')
 
+    group.deinit()
+
 if __name__ == "__main__":
     main()
