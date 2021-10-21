@@ -36,13 +36,15 @@ relays_avail = [
             ]
 
 class RelaysGroup:
+    sock = None
+
     def __init__(self, list_relays):
         self.__relays = []
         self.__configures = []
         self.__addr = '192.168.0.101'
         self.__TCPport = 2424
         self.__password = 'Laurent'
-        self.__sock = None
+        #self.__sock = None
         self.__TCPblockSize = 1024
 
         if self.__checkRelays(list_relays) and self.__initialize():
@@ -127,9 +129,10 @@ class RelaysGroup:
         return self.__configures
 
     def deinit(self):
-        if self.__sock:
-            self.__sock.close()
-            self.__sock = None
+        #if self.__sock:
+        if RelaysGroup.sock:
+            RelaysGroup.sock.close()
+            RelaysGroup.sock = None
 
     def __checkRelays(self, list_relays):
         print(list_relays)
@@ -172,8 +175,8 @@ class RelaysGroup:
         #if not urlRequest.read().strip() == 'DONE':
         #    #TODO log message
         #    return 2
-        self.__sock.send(b"$KE,REL," + str(num).encode() + b"," + str(state).encode() + b"\r\n")
-        rcv_data = self.__sock.recv(self.__TCPblockSize)
+        RelaysGroup.sock.send(b"$KE,REL," + str(num).encode() + b"," + str(state).encode() + b"\r\n")
+        rcv_data = RelaysGroup.sock.recv(self.__TCPblockSize)
 
         if not ("#REL,OK" in rcv_data.decode("utf-8")):
             #TODO log message
@@ -183,13 +186,13 @@ class RelaysGroup:
         return 0
 
     def __initTCPConnection(self):
-        self.__sock = socket.socket()
+        RelaysGroup.sock = socket.socket()
 
-        self.__sock.connect( (self.__addr, self.__TCPport) )
+        RelaysGroup.sock.connect( (self.__addr, self.__TCPport) )
 
         #check connection
-        self.__sock.send(b"$KE\r\n")
-        rcv_data = self.__sock.recv(self.__TCPblockSize)
+        RelaysGroup.sock.send(b"$KE\r\n")
+        rcv_data = RelaysGroup.sock.recv(self.__TCPblockSize)
 
         if not ("#OK" in rcv_data.decode("utf-8")):
             #TODO log message
@@ -197,8 +200,8 @@ class RelaysGroup:
             return 1
 
         #set password
-        self.__sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
-        rcv_data = self.__sock.recv(self.__TCPblockSize)
+        RelaysGroup.sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
+        rcv_data = RelaysGroup.sock.recv(self.__TCPblockSize)
 
         if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
             #TODO log message
