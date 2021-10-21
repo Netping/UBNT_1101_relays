@@ -172,11 +172,11 @@ class RelaysGroup:
         #if not urlRequest.read().strip() == 'DONE':
         #    #TODO log message
         #    return 2
-        self.__sock.send(b"$KE,REL," + str(num) + "," + str(state))
+        self.__sock.send(b"$KE,REL," + str(num).encode() + b"," + str(state).encode() + b"\r\n")
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         while rcv_data:
-            if not (b"#REL,OK" in rcv_data):
+            if not ("#REL,OK" in rcv_data.decode("utf-8")):
                 #TODO log message
                 print('Error in setting relay ' + str(num) + ' to ' + str(state))
                 return 1
@@ -189,21 +189,21 @@ class RelaysGroup:
         self.__sock.connect( (self.__addr, self.__TCPport) )
 
         #check connection
-        self.__sock.send(b"$KE")
+        self.__sock.send(b"$KE\r\n")
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         while rcv_data:
-            if not (b"#OK" in rcv_data):
+            if not ("#OK" in rcv_data.decode("utf-8")):
                 #TODO log message
                 print("Can't connect to device")
                 return 1
 
         #set password
-        self.__sock.send(b"$KE,PSW,SET," + self.__password)
+        self.__sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         while rcv_data:
-            if not (b"#PSW,SET,OK" in rcv_data):
+            if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
                 #TODO log message
                 print("Can't set password")
                 return 2
