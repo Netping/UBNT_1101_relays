@@ -186,9 +186,9 @@ class RelaysGroup:
         return 0
 
     def __initTCPConnection(self):
-        RelaysGroup.sock = socket.socket()
-
-        RelaysGroup.sock.connect( (self.__addr, self.__TCPport) )
+        if not RelaysGroup.sock:
+            RelaysGroup.sock = socket.socket()
+            RelaysGroup.sock.connect( (self.__addr, self.__TCPport) )
 
         #check connection
         RelaysGroup.sock.send(b"$KE\r\n")
