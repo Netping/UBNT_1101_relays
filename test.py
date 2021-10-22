@@ -53,7 +53,7 @@ def main():
                 ]
     }
 
-    connector = RelayConnector('192.168.0.101', '2424', 'Laurent')
+    connector = RelayConnector('192.168.0.101', 2424, 'Laurent')
 
     group = RelaysGroup(['C1','C2'], connector)
 
@@ -65,7 +65,7 @@ def main():
 
     DischargeLoad_1('Discharge1')
 
-    connector.deinit()
+    connector.deinitConnection()
 
 if __name__ == "__main__":
     main()
