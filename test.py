@@ -53,7 +53,9 @@ def main():
                 ]
     }
 
-    group = RelaysGroup(['C1','C2'])
+    connector = RelayConnector('192.168.0.101', '2424', 'Laurent')
+
+    group = RelaysGroup(['C1','C2'], connector)
 
     DischargeLoad_1 = group.configure("Discharge1", conf_dict_1)
     DischargeLoad_2 = group.configure("Discharge2", conf_dict_2)
@@ -63,7 +65,7 @@ def main():
 
     DischargeLoad_1('Discharge1')
 
-    group.deinit()
+    connector.deinit()
 
 if __name__ == "__main__":
     main()

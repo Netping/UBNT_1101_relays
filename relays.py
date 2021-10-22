@@ -1,4 +1,3 @@
-from urllib.request import urlopen
 import socket
 
 
@@ -35,16 +34,67 @@ relays_avail = [
                 { 'name' : 'C28', 'number' : 28 }, 
             ]
 
-class RelaysGroup:
-    sock = None
+class RelayConnector:
+    def __init__(self, addr, port, password):
+        self.__addr = addr
+        self.__TCPport = port
+        self.__password = password
+        self.__sock = None
+        self.__TCPblockSize = 1024
 
-    def __init__(self, list_relays):
+    def initConnection(self):
+        if not self.__sock:
+            self.__sock = socket.socket()
+            self.__sock.connect( (self.__addr, self.__TCPport) )
+
+        #check connection
+        self.__sock.send(b"$KE\r\n")
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        if not ("#OK" in rcv_data.decode("utf-8")):
+            #TODO log message
+            print("Can't connect to device")
+            return 1
+
+        #set password
+        self.__sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
+            #TODO log message
+            print("Can't set password")
+            return 2
+
+        return 0
+
+    def deinitConnection(self):
+        if self.__sock:
+            self.__sock.close()
+            self.__sock = None
+
+    def getSocket(self):
+        return self.__sock
+
+    def getAddress(self):
+        return self.__addr
+
+    def getPort(self):
+        return self.__TCPport
+
+    def getPassword(self):
+        return self.__password
+
+class RelaysGroup:
+    #sock = None
+
+    def __init__(self, list_relays, connector):
         self.__relays = []
         self.__configures = []
-        self.__addr = '192.168.0.101'
-        self.__TCPport = 2424
-        self.__password = 'Laurent'
-        #self.__sock = None
+        self.__connector = connector
+        self.__addr = ''
+        self.__TCPport = 0
+        self.__password = ''
+        self.__sock = None
         self.__TCPblockSize = 1024
 
         if self.__checkRelays(list_relays) and self.__initialize():
@@ -128,12 +178,6 @@ class RelaysGroup:
     def getConfigures(self):
         return self.__configures
 
-    def deinit(self):
-        #if self.__sock:
-        if RelaysGroup.sock:
-            RelaysGroup.sock.close()
-            RelaysGroup.sock = None
-
     def __checkRelays(self, list_relays):
         print(list_relays)
 
@@ -152,8 +196,14 @@ class RelaysGroup:
 
     def __initialize(self):
         #check connection
-        if self.__initTCPConnection():
+        if self.__connector.initConnection():
             return False
+
+        #fill fields
+        self.__addr = self.__connector.getAddress()
+        self.__TCPport = self.__connector.getPort()
+        self.__password = self.__connector.getPassword()
+        self.__sock = self.__connector.getSocket()
 
         self.__relaysOff()
 
@@ -166,46 +216,12 @@ class RelaysGroup:
                 pass
 
     def __sendCommand(self, num, state):
-        #urlRequest = urlopen(self.__addr + '/cmd.cgi?psw=' + self.__password + '&cmd=REL,' + str(num) + ',' + str(state))
-
-        #if not urlRequest.getcode() == 200:
-        #    #TODO log message
-        #    return 1
-
-        #if not urlRequest.read().strip() == 'DONE':
-        #    #TODO log message
-        #    return 2
-        RelaysGroup.sock.send(b"$KE,REL," + str(num).encode() + b"," + str(state).encode() + b"\r\n")
-        rcv_data = RelaysGroup.sock.recv(self.__TCPblockSize)
+        self.__sock.send(b"$KE,REL," + str(num).encode() + b"," + str(state).encode() + b"\r\n")
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         if not ("#REL,OK" in rcv_data.decode("utf-8")):
             #TODO log message
             print('Error in setting relay ' + str(num) + ' to ' + str(state))
             return 1
-
-        return 0
-
-    def __initTCPConnection(self):
-        if not RelaysGroup.sock:
-            RelaysGroup.sock = socket.socket()
-            RelaysGroup.sock.connect( (self.__addr, self.__TCPport) )
-
-        #check connection
-        RelaysGroup.sock.send(b"$KE\r\n")
-        rcv_data = RelaysGroup.sock.recv(self.__TCPblockSize)
-
-        if not ("#OK" in rcv_data.decode("utf-8")):
-            #TODO log message
-            print("Can't connect to device")
-            return 1
-
-        #set password
-        RelaysGroup.sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
-        rcv_data = RelaysGroup.sock.recv(self.__TCPblockSize)
-
-        if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
-            #TODO log message
-            print("Can't set password")
-            return 2
 
         return 0
