@@ -1,4 +1,5 @@
 import socket
+import logging
 
 
 
@@ -42,6 +43,9 @@ class RelayConnector:
         self.__sock = None
         self.__TCPblockSize = 1024
 
+        self.__logger = logging.getLogger('UBNT_1101_Relays Connector')
+        self.__logger.setLevel(logging.ERROR)
+
     def initConnection(self):
         if not self.__sock:
             self.__sock = socket.socket()
@@ -52,8 +56,9 @@ class RelayConnector:
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         if not ("#OK" in rcv_data.decode("utf-8")):
-            #TODO log message
-            print("Can't connect to device")
+            #log message
+            self.__logger.error("Can't connect to device (ip: " + self.__addr + " port: " + self.__TCPport)
+            #print("Can't connect to device")
             return 1
 
         #set password
@@ -61,8 +66,9 @@ class RelayConnector:
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
-            #TODO log message
-            print("Can't set password")
+            #log message
+            self.__logger.error("Can't set password for device (ip: " + self.__addr + " port: " + self.__TCPport)
+            #print("Can't set password")
             return 2
 
         return 0
@@ -85,8 +91,6 @@ class RelayConnector:
         return self.__password
 
 class RelaysGroup:
-    #sock = None
-
     def __init__(self, list_relays, connector):
         self.__relays = []
         self.__configures = []
@@ -97,19 +101,24 @@ class RelaysGroup:
         self.__sock = None
         self.__TCPblockSize = 1024
 
+        self.__logger = logging.getLogger('UBNT_1101_Relays Group')
+        self.__logger.setLevel(logging.ERROR)
+
         if self.__checkRelays(list_relays) and self.__initialize():
             #create list for self.__relays
             for e in list_relays:
                 self.__relays.append({ 'name' : e, 'state' : "OFF" })
         else:
-            #TODO log message
-            print("Can't init group")
+            #log message
+            self.__logger.error("Can't init relays group")
+            #print("Can't init group")
 
     def configure(self, name, state_dict):
         for c in self.__configures:
             if c['name'] == name:
-                #TODO message to log
-                print('That configure name already exists')
+                #message to log
+                self.__logger.error("That configure name already exists (" + name + ")")
+                #print('That configure name already exists')
                 return 1
 
         element = { 
@@ -139,7 +148,8 @@ class RelaysGroup:
                                 state = 1
 
                             if state == 2:
-                                #TODO log message
+                                #log message
+                                self.__logger.error("Wrong state value (" + l['state'] + ")")
                                 return
 
                             self.__sendCommand(relay['number'] , state)
@@ -148,7 +158,7 @@ class RelaysGroup:
                 element['state'] = 'ON'
 
             elif arg.upper() == 'OFF':
-                #TODO turn off configure
+                #turn off configure
                 for l in element['value']['OFF']:
                     for relay in relays_avail:
                         if relay['name'] == l['name']:
@@ -160,7 +170,8 @@ class RelaysGroup:
                                 state = 1
 
                             if state == 2:
-                                #TODO log message
+                                #log message
+                                self.__logger.error("Wrong state value (" + l['state'] + ")")
                                 return
 
                             self.__sendCommand(relay['number'] , state)
@@ -213,6 +224,7 @@ class RelaysGroup:
         for e in relays_avail:
             if self.__sendCommand(e['number'], 0):
                 #TODO log message
+                self.__logger.error("Error in setting relay " + e['number'] + " to OFF state")
                 pass
 
     def __sendCommand(self, num, state):
@@ -220,8 +232,9 @@ class RelaysGroup:
         rcv_data = self.__sock.recv(self.__TCPblockSize)
 
         if not ("#REL,OK" in rcv_data.decode("utf-8")):
-            #TODO log message
-            print('Error in setting relay ' + str(num) + ' to ' + str(state))
+            #log message
+            #print('Error in setting relay ' + str(num) + ' to ' + str(state))
+            self.__logger.error('Error in setting relay ' + str(num) + ' to ' + str(state))
             return 1
 
         return 0
