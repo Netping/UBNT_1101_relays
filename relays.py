@@ -35,69 +35,13 @@ relays_avail = [
                 { 'name' : 'C28', 'number' : 28 }, 
             ]
 
-class RelayConnector:
-    def __init__(self, addr, port, password):
-        self.__addr = addr
-        self.__TCPport = port
-        self.__password = password
-        self.__sock = None
-        self.__TCPblockSize = 1024
-
-        self.__logger = logging.getLogger('UBNT_1101_Relays Connector')
-        self.__logger.setLevel(logging.ERROR)
-
-    def initConnection(self):
-        if not self.__sock:
-            self.__sock = socket.socket()
-            self.__sock.connect( (self.__addr, self.__TCPport) )
-
-        #check connection
-        self.__sock.send(b"$KE\r\n")
-        rcv_data = self.__sock.recv(self.__TCPblockSize)
-
-        if not ("#OK" in rcv_data.decode("utf-8")):
-            #log message
-            self.__logger.error("Can't connect to device (ip: " + self.__addr + " port: " + self.__TCPport)
-            #print("Can't connect to device")
-            return 1
-
-        #set password
-        self.__sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
-        rcv_data = self.__sock.recv(self.__TCPblockSize)
-
-        if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
-            #log message
-            self.__logger.error("Can't set password for device (ip: " + self.__addr + " port: " + self.__TCPport)
-            #print("Can't set password")
-            return 2
-
-        return 0
-
-    def deinitConnection(self):
-        if self.__sock:
-            self.__sock.close()
-            self.__sock = None
-
-    def getSocket(self):
-        return self.__sock
-
-    def getAddress(self):
-        return self.__addr
-
-    def getPort(self):
-        return self.__TCPport
-
-    def getPassword(self):
-        return self.__password
-
 class RelaysGroup:
-    def __init__(self, list_relays, connector):
+    def __init__(self, list_relays):
         self.__relays = []
         self.__configures = []
-        self.__connector = connector
-        self.__addr = ''
-        self.__TCPport = 0
-        self.__password = ''
+        self.__addr = '192.168.0.101'
+        self.__TCPport = 2424
+        self.__password = 'Laurent'
         self.__sock = None
         self.__TCPblockSize = 1024
 
@@ -113,6 +57,28 @@ class RelaysGroup:
             self.__logger.error("Can't init relays group")
             #print("Can't init group")
 
+        #build default name and state_dict
+        name = ''
+        state_dict = {
+            'ON' : [],
+            'OFF' : []
+        }
+
+        for relay in list_relays:
+            e_on = {}
+            e_on['name'] = relay
+            e_on['state'] = 'ON'
+            state_dict['ON'].append(e_on)
+
+            e_off = {}
+            e_off['name'] = relay
+            e_off['state'] = 'OFF'
+            state_dict['OFF'].append(e_off)
+
+            name = name + relay + '_'
+
+        return self.configure(name, state_dict)
+
     def configure(self, name, state_dict):
         for c in self.__configures:
             if c['name'] == name:
@@ -122,8 +88,8 @@ class RelaysGroup:
                 return 1
 
         element = { 
-                    'name' : name, 
-                    'value' : state_dict, 
+                    'name' : name,
+                    'value' : state_dict,
                     'state' : 'OFF'
                 }
 
@@ -183,15 +149,7 @@ class RelaysGroup:
 
         return changeState
 
-    def getRelays(self):
-        return self.__relays
-
-    def getConfigures(self):
-        return self.__configures
-
     def __checkRelays(self, list_relays):
-        print(list_relays)
-
         for e in list_relays:
             flag = False
 
@@ -207,14 +165,8 @@ class RelaysGroup:
 
     def __initialize(self):
         #check connection
-        if self.__connector.initConnection():
+        if self.__initConnection():
             return False
-
-        #fill fields
-        self.__addr = self.__connector.getAddress()
-        self.__TCPport = self.__connector.getPort()
-        self.__password = self.__connector.getPassword()
-        self.__sock = self.__connector.getSocket()
 
         self.__relaysOff()
 
@@ -226,6 +178,33 @@ class RelaysGroup:
                 #TODO log message
                 self.__logger.error("Error in setting relay " + e['number'] + " to OFF state")
                 pass
+
+    def __initConnection(self):
+        if not self.__sock:
+            self.__sock = socket.socket()
+            self.__sock.connect( (self.__addr, self.__TCPport) )
+
+        #check connection
+        self.__sock.send(b"$KE\r\n")
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        if not ("#OK" in rcv_data.decode("utf-8")):
+            #log message
+            self.__logger.error("Can't connect to device (ip: " + self.__addr + " port: " + self.__TCPport)
+            #print("Can't connect to device")
+            return 1
+
+        #set password
+        self.__sock.send(b"$KE,PSW,SET," + self.__password.encode() + b"\r\n")
+        rcv_data = self.__sock.recv(self.__TCPblockSize)
+
+        if not ("#PSW,SET,OK" in rcv_data.decode("utf-8")):
+            #log message
+            self.__logger.error("Can't set password for device (ip: " + self.__addr + " port: " + self.__TCPport)
+            #print("Can't set password")
+            return 2
+
+        return 0
 
     def __sendCommand(self, num, state):
         self.__sock.send(b"$KE,REL," + str(num).encode() + b"," + str(state).encode() + b"\r\n")
